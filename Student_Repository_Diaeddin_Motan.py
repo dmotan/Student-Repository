@@ -5,14 +5,45 @@ from utilities import file_reader
 from typing import List, Tuple, Dict, DefaultDict, Iterator, Any, Set
 
 
+class Major:
+    """ Represents a major """
+    pt_hdr: List[str] = ['Major', 'Required Courses', 'Electives']
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._major: Dict[str, Dict[str, Set[str]]] = {
+            name: {'R': set(), 'E': set()}}
+
+    def _add_course(self, flag: str, course: str) -> None:
+        self._major[self._name][flag].add(course)
+
+    def _remaining_required(self, courses: Set[str]) -> Set[str]:
+        for m_courses in self._major.values():
+            return m_courses['R'] - set(courses)
+
+    def _remaining_electives(self, courses: Set[str]) -> Set[str]:
+        for m_courses in self._major.values():
+            c = m_courses['E'].intersection(set(courses))
+            if len(c) > 0:
+                return []
+            return m_courses['E']
+
+    def pt_row(self) -> Tuple[str, List[str], List[str]]:
+        """ A major data to be added to the Majors prettytable
+        """
+        for courses in self._major.values():
+            return self._name, sorted(courses['R']), sorted(courses['E'])
+
+
 class Student:
     """ Represent a single student """
-    pt_hdr: Tuple[str, str, str] = ['CWID', 'Name', 'Completed Courses', 'GPA']
+    pt_hdr: Tuple[str, str, str] = ['CWID', 'Name', 'Completed Courses',
+                                    'Remaining Required', 'Remaining Electives', 'GPA']
 
-    def __init__(self, cwid: str, name: str, major: str):
+    def __init__(self, cwid: str, name: str, major: Major):
         self._cwid: str = cwid
         self._name: str = name
-        self._major: str = Major(major)
+        self._major: Major = major
         # key: course value: str with grade
         self._courses: Dict[str, str] = dict()
 
@@ -22,9 +53,11 @@ class Student:
 
     def pt_row(self) -> Tuple[str, str, List[str]]:
         """ return a list of values to populate the prettytable for this student """
-        return self._cwid, self._name, sorted(self._courses.keys()), self.get_gpa()
+        return self._cwid, self._name, sorted(self._courses.keys()), sorted(
+            self._major._remaining_required(self._courses.keys())), sorted(
+            self._major._remaining_electives(self._courses.keys())), self._get_gpa()
 
-    def get_gpa(self) -> float:
+    def _get_gpa(self) -> float:
         sum: float = 0
         total: int = len(self._courses.keys())
         for grade in self._courses.values():
@@ -70,25 +103,6 @@ class Instructor:
             yield self._cwid, self._name, self._dept, course, count
 
 
-class Major:
-    """ Represents a major """
-    pt_hdr: List[str] = ['Major', 'Required Courses', 'Electives']
-
-    def __init__(self, name: str) -> None:
-        self._name = name
-        self._major: Dict[str, Dict[str, Set[str]]] = {
-            name: {'R': set(), 'E': set()}}
-
-    def _add_course(self, flag: str, course: str) -> None:
-        self._major[self._name][flag].add(course)
-
-    def pt_row(self) -> Tuple[str, List[str], List[str]]:
-        """ A major data to be added to the Majors prettytable
-        """
-        for courses in self._major.values():
-            return self._name, sorted(courses['R']), sorted(courses['E'])
-
-
 class Repository:
     """ Store all information abut students and instructors """
 
@@ -101,10 +115,10 @@ class Repository:
         self._majors: Dict[str, Major] = dict()
 
         try:
+            self._get_major_data(os.path.join(wdir, 'majors.txt'))
             self._get_students(os.path.join(wdir, 'students.txt'))
             self._get_instructors(os.path.join(wdir, 'instructors.txt'))
             self._get_grades(os.path.join(wdir, 'grades.txt'))
-            self._get_major_data(os.path.join(wdir, 'majors.txt'))
 
         except ValueError as ve:
             print(ve)
@@ -112,21 +126,32 @@ class Repository:
             print(fnfe)
 
         if ptables:
+            print('\nMajor Summary')
+            self.major_table()
+
             print('\nStudent Summary')
             self.student_table()
 
             print('\nInstructor Summary')
             self.instructor_table()
 
-            print('\nMajor Summary')
-            self.major_table()
+    def _get_major_data(self, path: str) -> None:
+        """ read majors file and store required and elective data.
+            Allow exceptions from reading the file to flow back to the caller
+        """
+        for major_name, flag, course in file_reader(path, 3, sep='\t', header=True):
+            if major_name in self._majors:
+                self._majors[major_name]._add_course(flag, course)
+            else:
+                self._majors[major_name] = Major(major_name)
+                self._majors[major_name]._add_course(flag, course)
 
     def _get_students(self, path: str) -> None:
         """ read students from path and add to the self.students.
             Allow exceptions from reading the file to flow back to the caller
         """
         for cwid, name, major in file_reader(path, 3, sep=';', header=True):
-            self._students[cwid] = Student(cwid, name, major)
+            self._students[cwid] = Student(cwid, name, self._majors[major])
 
     def _get_instructors(self, path: str) -> None:
         """ read instructors from path and add to the self.instructors.
@@ -150,16 +175,13 @@ class Repository:
             else:
                 print(f"Found grade for unknown student '{instructor_cwid}'")
 
-    def _get_major_data(self, path: str) -> None:
-        """ read majors file and store required and elective data.
-            Allow exceptions from reading the file to flow back to the caller
-        """
-        for major_name, flag, course in file_reader(path, 3, sep='\t', header=True):
-            if major_name in self._majors:
-                self._majors[major_name]._add_course(flag, course)
-            else:
-                self._majors[major_name] = Major(major_name)
-                self._majors[major_name]._add_course(flag, course)
+    def major_table(self) -> None:
+        """ print a PrettyTable with a summary of all majors """
+        pt: PrettyTable = PrettyTable(field_names=Major.pt_hdr)
+        for major in self._majors.values():
+            pt.add_row(major.pt_row())
+
+        print(pt)
 
     def student_table(self) -> None:
         """ print a PrettyTable with a summary of all students """
@@ -176,14 +198,6 @@ class Repository:
             # each instructor may teach many classes
             for row in instructor.pt_row():
                 pt.add_row(row)
-
-        print(pt)
-
-    def major_table(self) -> None:
-        """ print a PrettyTable with a summary of all majors """
-        pt: PrettyTable = PrettyTable(field_names=Major.pt_hdr)
-        for major in self._majors.values():
-            pt.add_row(major.pt_row())
 
         print(pt)
 
