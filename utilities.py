@@ -25,5 +25,6 @@ def file_reader(path, fields, sep=',', header=False) -> Iterator[Tuple[str]]:
                     raise ValueError(
                         f"'{path}' has {len(lst)} fields on line {cnt} but expected {fields} ")
                 if header == True:
-                    continue
+                    header = False
+                    line = next(fp).rstrip("\n")
                 yield line.split(sep)
