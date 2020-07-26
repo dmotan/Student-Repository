@@ -2,12 +2,12 @@ import os
 from collections import defaultdict
 from prettytable import PrettyTable
 from utilities import file_reader
-from typing import List, Tuple, Dict, DefaultDict, Iterator, Any
+from typing import List, Tuple, Dict, DefaultDict, Iterator, Any, Set
 
 
 class Student:
     """ Represent a single student """
-    pt_hdr: Tuple[str, str, str] = ['CWID', 'Name', 'Completed Courses']
+    pt_hdr: Tuple[str, str, str] = ['CWID', 'Name', 'Completed Courses', 'GPA']
 
     def __init__(self, cwid: str, name: str, major: str):
         self._cwid: str = cwid
@@ -22,7 +22,29 @@ class Student:
 
     def pt_row(self) -> Tuple[str, str, List[str]]:
         """ return a list of values to populate the prettytable for this student """
-        return self._cwid, self._name, sorted(self._courses.keys())
+        return self._cwid, self._name, sorted(self._courses.keys()), self.get_gpa()
+
+    def get_gpa(self) -> float:
+        sum: float = 0
+        total: int = len(self._courses.keys())
+        for grade in self._courses.values():
+            if grade == 'A':
+                sum += 4.0
+            if grade == 'A-':
+                sum += 3.75
+            if grade == 'B+':
+                sum += 3.25
+            if grade == 'B':
+                sum += 3.0
+            if grade == 'B-':
+                sum += 2.75
+            if grade == 'C+':
+                sum += 2.25
+            if grade == 'C':
+                sum += 2.0
+            else:
+                sum += 0
+        return round(sum/total, 2)
 
 
 class Instructor:
@@ -123,21 +145,21 @@ class Repository:
 
 
 def main():
-    wdir09 = '/Users/dmotan/Desktop/Master/SSW-810/week9/stevens'
-    wdir10 = '/Users/dmotan/Desktop/Master/SSW-810/week10/njit'
-    wdir_bad_data = '/Users/dmotan/Desktop/Master/SSW-810/week9/test'
+    wdir09 = '/Users/dmotan/Desktop/Master/SSW-810/week10'
+    # wdir10 = '/Users/dmotan/Desktop/Master/SSW-810/week10/njit'
+    # wdir_bad_data = '/Users/dmotan/Desktop/Master/SSW-810/week9/test'
 
     try:
         print("Good data")
         _ = Repository(wdir09)
 
-        print("\nBad Data")
-        print("should report unkown student instructor")
-        _ = Repository(wdir10)
+        # print("\nBad Data")
+        # print("should report unkown student instructor")
+        # _ = Repository(wdir10)
 
-        print("\nBad Fields\n")
-        print("should report bad student, grade, instructor feeds")
-        _ = Repository(wdir_bad_data)
+        # print("\nBad Fields\n")
+        # print("should report bad student, grade, instructor feeds")
+        # _ = Repository(wdir_bad_data)
     except (FileNotFoundError, KeyError, ValueError) as e:
         print(f"Exception in main: {e}")
 
