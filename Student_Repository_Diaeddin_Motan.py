@@ -78,21 +78,21 @@ class Repository:
         """ read students from path and add to the self.students.
             Allow exceptions from reading the file to flow back to the caller
         """
-        for cwid, name, major in file_reader(path, 3, sep='\t', header=False):
+        for cwid, name, major in file_reader(path, 3, sep=';', header=True):
             self._students[cwid] = Student(cwid, name, major)
 
     def _get_instructors(self, path: str) -> None:
         """ read instructors from path and add to the self.instructors.
             Allow exceptions from reading the file to flow back to the caller
         """
-        for cwid, name, dept in file_reader(path, 3, sep='\t', header=False):
+        for cwid, name, dept in file_reader(path, 3, sep='|', header=True):
             self._instructors[cwid] = Instructor(cwid, name, dept)
 
     def _get_grades(self, path: str) -> None:
         """ read grades file and attreibute the grade to the appropriate student and instructor.
             Allow exceptions from reading the file to flow back to the caller
         """
-        for student_cwid, course, grade, instructor_cwid in file_reader(path, 4, sep='\t', header=False):
+        for student_cwid, course, grade, instructor_cwid in file_reader(path, 4, sep='|', header=True):
             if student_cwid in self._students:
                 self._students[student_cwid].add_course(course, grade)
             else:
