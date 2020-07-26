@@ -12,7 +12,7 @@ class Student:
     def __init__(self, cwid: str, name: str, major: str):
         self._cwid: str = cwid
         self._name: str = name
-        self._major: str = major
+        self._major: str = Major(major)
         # key: course value: str with grade
         self._courses: Dict[str, str] = dict()
 
@@ -70,6 +70,25 @@ class Instructor:
             yield self._cwid, self._name, self._dept, course, count
 
 
+class Major:
+    """ Represents a major """
+    pt_hdr: List[str] = ['Major', 'Required Courses', 'Electives']
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._major: Dict[str, Dict[str, Set[str]]] = {
+            name: {'R': set(), 'E': set()}}
+
+    def _add_course(self, flag: str, course: str) -> None:
+        self._major[self._name][flag].add(course)
+
+    def pt_row(self) -> Tuple[str, List[str], List[str]]:
+        """ A major data to be added to the Majors prettytable
+        """
+        for courses in self._major.values():
+            return self._name, sorted(courses['R']), sorted(courses['E'])
+
+
 class Repository:
     """ Store all information abut students and instructors """
 
@@ -79,11 +98,14 @@ class Repository:
         self._students: Dict[str, Student] = dict()
         # key:cwid, value: instance of instructor class
         self._instructors: Dict[str, Instructor] = dict()
+        self._majors: Dict[str, Major] = dict()
 
         try:
             self._get_students(os.path.join(wdir, 'students.txt'))
             self._get_instructors(os.path.join(wdir, 'instructors.txt'))
             self._get_grades(os.path.join(wdir, 'grades.txt'))
+            self._get_major_data(os.path.join(wdir, 'majors.txt'))
+
         except ValueError as ve:
             print(ve)
         except FileNotFoundError as fnfe:
@@ -95,6 +117,9 @@ class Repository:
 
             print('\nInstructor Summary')
             self.instructor_table()
+
+            print('\nMajor Summary')
+            self.major_table()
 
     def _get_students(self, path: str) -> None:
         """ read students from path and add to the self.students.
@@ -125,6 +150,17 @@ class Repository:
             else:
                 print(f"Found grade for unknown student '{instructor_cwid}'")
 
+    def _get_major_data(self, path: str) -> None:
+        """ read majors file and store required and elective data.
+            Allow exceptions from reading the file to flow back to the caller
+        """
+        for major_name, flag, course in file_reader(path, 3, sep='\t', header=True):
+            if major_name in self._majors:
+                self._majors[major_name]._add_course(flag, course)
+            else:
+                self._majors[major_name] = Major(major_name)
+                self._majors[major_name]._add_course(flag, course)
+
     def student_table(self) -> None:
         """ print a PrettyTable with a summary of all students """
         pt: PrettyTable = PrettyTable(field_names=Student.pt_hdr)
@@ -140,6 +176,14 @@ class Repository:
             # each instructor may teach many classes
             for row in instructor.pt_row():
                 pt.add_row(row)
+
+        print(pt)
+
+    def major_table(self) -> None:
+        """ print a PrettyTable with a summary of all majors """
+        pt: PrettyTable = PrettyTable(field_names=Major.pt_hdr)
+        for major in self._majors.values():
+            pt.add_row(major.pt_row())
 
         print(pt)
 
