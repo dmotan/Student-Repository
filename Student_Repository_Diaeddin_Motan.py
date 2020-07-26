@@ -77,7 +77,9 @@ class Student:
                 sum += 2.0
             else:
                 sum += 0
-        return round(sum/total, 2)
+        if total != 0:
+            return round(sum/total, 2)
+        return 0
 
 
 class Instructor:
@@ -204,20 +206,20 @@ class Repository:
 
 def main():
     wdir09 = '/Users/dmotan/Desktop/Master/SSW-810/week10'
-    # wdir10 = '/Users/dmotan/Desktop/Master/SSW-810/week10/njit'
-    # wdir_bad_data = '/Users/dmotan/Desktop/Master/SSW-810/week9/test'
+    wdir10 = '/Users/dmotan/Desktop/Master/SSW-810/week10/test'
+    wdir_bad_data = '/Users/dmotan/Desktop/Master/SSW-810/week10/bad'
 
     try:
         print("Good data")
         _ = Repository(wdir09)
 
-        # print("\nBad Data")
-        # print("should report unkown student instructor")
-        # _ = Repository(wdir10)
+        print("\nBad Data")
+        print("should report unkown student instructor")
+        _ = Repository(wdir10)
 
-        # print("\nBad Fields\n")
-        # print("should report bad student, grade, instructor feeds")
-        # _ = Repository(wdir_bad_data)
+        print("\nBad Fields\n")
+        print("should report bad student, grade, instructor feeds")
+        _ = Repository(wdir_bad_data)
     except (FileNotFoundError, KeyError, ValueError) as e:
         print(f"Exception in main: {e}")
 
