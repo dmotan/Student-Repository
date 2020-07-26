@@ -3,28 +3,28 @@
 
 import unittest
 import os
-from Student_Repository_Diaeddin_Motan import Repository, Student, Instructor
+from Student_Repository_Diaeddin_Motan import Repository, Student, Instructor, Major
 from utilities import file_reader
 
 
 class TestRepository(unittest.TestCase):
     def setUp(self):
-        self.test_path = '/Users/dmotan/Desktop/Master/SSW-810/week9/stevens'
+        self.test_path = '/Users/dmotan/Desktop/Master/SSW-810/week10'
         self.repo = Repository(self.test_path, False)
 
     def test_Student_attributes(self):
         """ Verify that a specific student is set up properly """
         expected = {
-            '10103': ('10103', 'Baldwin, C', ['CS 501', 'SSW 564', 'SSW 567', 'SSW 687']),
-            '10115': ('10115', 'Wyatt, X', ['CS 545', 'SSW 564', 'SSW 567', 'SSW 687']),
-            '10172': ('10172', 'Forbes, I', ['SSW 555', 'SSW 567']),
-            '10175': ('10175', 'Erickson, D', ['SSW 564', 'SSW 567', 'SSW 687']),
-            '10183': ('10183', 'Chapman, O', ['SSW 689']),
-            '11399': ('11399', 'Cordova, I', ['SSW 540']),
-            '11461': ('11461', 'Wright, U', ['SYS 611', 'SYS 750', 'SYS 800']),
-            '11658': ('11658', 'Kelly, P', ['SSW 540']),
-            '11714': ('11714', 'Morton, A', ['SYS 611', 'SYS 645']),
-            '11788': ('11788', 'Fuller, E', ['SSW 540'])
+            '10103': ('10103', 'Baldwin, C', ['CS 501', 'SSW 564', 'SSW 567', 'SSW 687'], ['SSW 540', 'SSW 555'], [], 3.44),
+            '10115': ('10115', 'Wyatt, X', ['CS 545', 'SSW 564', 'SSW 567', 'SSW 687'], ['SSW 540', 'SSW 555'], [], 3.81),
+            '10172': ('10172', 'Forbes, I', ['SSW 555', 'SSW 567'], ['SSW 540', 'SSW 564'], ['CS 501', 'CS 513', 'CS 545'], 3.88),
+            '10175': ('10175', 'Erickson, D', ['SSW 564', 'SSW 567', 'SSW 687'], ['SSW 540', 'SSW 555'], ['CS 501', 'CS 513', 'CS 545'], 3.58),
+            '10183': ('10183', 'Chapman, O', ['SSW 689'], ['SSW 540', 'SSW 555', 'SSW 564', 'SSW 567'], ['CS 501', 'CS 513', 'CS 545'], 4.0),
+            '11399': ('11399', 'Cordova, I', ['SSW 540'], ['SYS 612', 'SYS 671', 'SYS 800'], [], 3.0),
+            '11461': ('11461', 'Wright, U', ['SYS 611', 'SYS 750', 'SYS 800'], ['SYS 612', 'SYS 671'], ['SSW 540', 'SSW 565', 'SSW 810'], 3.92),
+            '11658': ('11658', 'Kelly, P', ['SSW 540'], ['SYS 612', 'SYS 671', 'SYS 800'], [], 0.0),
+            '11714': ('11714', 'Morton, A', ['SYS 611', 'SYS 645'], ['SYS 612', 'SYS 671', 'SYS 800'], ['SSW 540', 'SSW 565', 'SSW 810'], 3.0),
+            '11788': ('11788', 'Fuller, E', ['SSW 540'], ['SYS 612', 'SYS 671', 'SYS 800'], [], 4.0)
         }
 
         calculated = {cwid: student.pt_row()
@@ -51,6 +51,18 @@ class TestRepository(unittest.TestCase):
 
         calculated = {tuple(detail) for instructor in self.repo._instructors.values(
         ) for detail in instructor.pt_row()}
+
+        self.assertEqual(expected, calculated)
+
+    def test_Major_attributes(self):
+        """ Verify that a specific major is set up properly """
+        expected = {
+            'SFEN': ('SFEN', ['SSW 540', 'SSW 555', 'SSW 564', 'SSW 567'], ['CS 501', 'CS 513', 'CS 545']),
+            'SYEN': ('SYEN', ['SYS 612', 'SYS 671', 'SYS 800'], ['SSW 540', 'SSW 565', 'SSW 810']),
+        }
+
+        calculated = {name: major.pt_row()
+                      for name, major in self.repo._majors.items()}
 
         self.assertEqual(expected, calculated)
 
