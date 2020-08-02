@@ -14,7 +14,7 @@ class Major:
         self._major: Dict[str, Dict[str, Set[str]]] = {
             name: {'R': set(), 'E': set()}}
 
-    def _add_course(self, flag: str, course: str) -> None:
+    def add_course(self, flag: str, course: str) -> None:
         self._major[self._name][flag].add(course)
 
     def _remaining_required(self, courses: Set[str]) -> Set[str]:
@@ -53,30 +53,24 @@ class Student:
 
     def pt_row(self) -> Tuple[str, str, List[str]]:
         """ return a list of values to populate the prettytable for this student """
-        return self._cwid, self._name, sorted(self._courses.keys()), sorted(
-            self._major._remaining_required(self._courses.keys())), sorted(
-            self._major._remaining_electives(self._courses.keys())), self._get_gpa()
+        # print(self._cwid, self._name, self._courses.keys())
+        passed_courses: Dict[str, str] = dict()
+        for course, grade in self._courses.items():
+            if grade != 'C-' and grade != 'D+' and grade != 'D' and grade != 'D-' and grade != 'F':
+                passed_courses[course] = grade
+        return self._cwid, self._name, sorted(passed_courses.keys()), sorted(
+            self._major._remaining_required(passed_courses.keys())), sorted(
+            self._major._remaining_electives(passed_courses.keys())), self._get_gpa()
 
     def _get_gpa(self) -> float:
         sum: float = 0
         total: int = len(self._courses.keys())
+        grades: Dict = {'A': 4.0, 'A-': 3.75, 'B+': 3.25, 'B': 3.0, 'B-': 2.75,
+                        'C+': 2.25, 'C': 2.0, 'C-': 0, 'D+': 0, 'D': 0, 'D-': 0, 'F': 0}
+
         for grade in self._courses.values():
-            if grade == 'A':
-                sum += 4.0
-            if grade == 'A-':
-                sum += 3.75
-            if grade == 'B+':
-                sum += 3.25
-            if grade == 'B':
-                sum += 3.0
-            if grade == 'B-':
-                sum += 2.75
-            if grade == 'C+':
-                sum += 2.25
-            if grade == 'C':
-                sum += 2.0
-            else:
-                sum += 0
+            if grade in grades.keys():
+                sum += grades[grade]
         if total != 0:
             return round(sum/total, 2)
         return 0
@@ -93,7 +87,7 @@ class Instructor:
         self._courses: DefaultDict[str, int] = defaultdict(
             int)  # key: course value: number of students
 
-    def _add_student(self, course: str) -> None:
+    def add_student(self, course: str) -> None:
         """ Note that another student took a course with this instructor """
         self._courses[course] += 1
 
@@ -143,10 +137,10 @@ class Repository:
         """
         for major_name, flag, course in file_reader(path, 3, sep='\t', header=True):
             if major_name in self._majors:
-                self._majors[major_name]._add_course(flag, course)
+                self._majors[major_name].add_course(flag, course)
             else:
                 self._majors[major_name] = Major(major_name)
-                self._majors[major_name]._add_course(flag, course)
+                self._majors[major_name].add_course(flag, course)
 
     def _get_students(self, path: str) -> None:
         """ read students from path and add to the self.students.
@@ -173,7 +167,7 @@ class Repository:
                 print(f"Found grade for unknown student '{student_cwid}'")
 
             if instructor_cwid in self._instructors:
-                self._instructors[instructor_cwid]._add_student(course)
+                self._instructors[instructor_cwid].add_student(course)
             else:
                 print(f"Found grade for unknown student '{instructor_cwid}'")
 
