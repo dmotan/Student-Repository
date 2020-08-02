@@ -3,6 +3,7 @@ from collections import defaultdict
 from prettytable import PrettyTable
 from utilities import file_reader
 from typing import List, Tuple, Dict, DefaultDict, Iterator, Any, Set
+import sqlite3
 
 
 class Major:
@@ -37,8 +38,8 @@ class Major:
 
 class Student:
     """ Represent a single student """
-    pt_hdr: Tuple[str, str, str] = ['CWID', 'Name', 'Completed Courses',
-                                    'Remaining Required', 'Remaining Electives', 'GPA']
+    pt_hdr: List[str] = ['CWID', 'Name', 'Major', 'Completed Courses',
+                         'Remaining Required', 'Remaining Electives', 'GPA']
 
     def __init__(self, cwid: str, name: str, major: Major):
         self._cwid: str = cwid
@@ -51,14 +52,14 @@ class Student:
         """ Note that the student took a course """
         self._courses[course] = grade
 
-    def pt_row(self) -> Tuple[str, str, List[str]]:
+    def pt_row(self) -> Tuple[str, str, str,  List[str]]:
         """ return a list of values to populate the prettytable for this student """
         # print(self._cwid, self._name, self._courses.keys())
         passed_courses: Dict[str, str] = dict()
         for course, grade in self._courses.items():
             if grade != 'C-' and grade != 'D+' and grade != 'D' and grade != 'D-' and grade != 'F':
                 passed_courses[course] = grade
-        return self._cwid, self._name, sorted(passed_courses.keys()), sorted(
+        return self._cwid, self._name, self._major._name, sorted(passed_courses.keys()), sorted(
             self._major._remaining_required(passed_courses.keys())), sorted(
             self._major._remaining_electives(passed_courses.keys())), self._get_gpa()
 
@@ -102,6 +103,8 @@ class Instructor:
 class Repository:
     """ Store all information abut students and instructors """
 
+    DB_FILE: str = "/Users/dmotan/Desktop/Master/SSW-810/week11/810_student_repo.db"
+
     def __init__(self, wdir: str, ptables: bool = True) -> None:
         self._wdir: str = wdir  # directory with the all files
         # key:cwid, value: instance of student class
@@ -131,6 +134,9 @@ class Repository:
             print('\nInstructor Summary')
             self.instructor_table()
 
+            print('\nStudent Grade Summary')
+            self.student_grades_table_db(self.DB_FILE)
+
     def _get_major_data(self, path: str) -> None:
         """ read majors file and store required and elective data.
             Allow exceptions from reading the file to flow back to the caller
@@ -146,21 +152,21 @@ class Repository:
         """ read students from path and add to the self.students.
             Allow exceptions from reading the file to flow back to the caller
         """
-        for cwid, name, major in file_reader(path, 3, sep=';', header=True):
+        for cwid, name, major in file_reader(path, 3, sep='\t', header=True):
             self._students[cwid] = Student(cwid, name, self._majors[major])
 
     def _get_instructors(self, path: str) -> None:
         """ read instructors from path and add to the self.instructors.
             Allow exceptions from reading the file to flow back to the caller
         """
-        for cwid, name, dept in file_reader(path, 3, sep='|', header=True):
+        for cwid, name, dept in file_reader(path, 3, sep='\t', header=True):
             self._instructors[cwid] = Instructor(cwid, name, dept)
 
     def _get_grades(self, path: str) -> None:
         """ read grades file and attreibute the grade to the appropriate student and instructor.
             Allow exceptions from reading the file to flow back to the caller
         """
-        for student_cwid, course, grade, instructor_cwid in file_reader(path, 4, sep='|', header=True):
+        for student_cwid, course, grade, instructor_cwid in file_reader(path, 4, sep='\t', header=True):
             if student_cwid in self._students:
                 self._students[student_cwid].add_course(course, grade)
             else:
@@ -183,6 +189,7 @@ class Repository:
         """ print a PrettyTable with a summary of all students """
         pt: PrettyTable = PrettyTable(field_names=Student.pt_hdr)
         for student in self._students.values():
+            # print(student.pt_row())
             pt.add_row(student.pt_row())
 
         print(pt)
@@ -197,23 +204,32 @@ class Repository:
 
         print(pt)
 
+    def student_grades_table_db(self, db_path) -> None:
+        db: sqlite3.Connection = sqlite3.connect(db_path)
+        pt: PrettyTable = PrettyTable(
+            field_names=['Name', 'CWID', 'Course', 'Grade', 'Instructor'])
+        for row in db.execute("select s.Name, s.CWID, g.Course, g.Grade, i.Name from grades g join students s on s.CWID=g.StudentCWID join instructors i on g.InstructorCWID=i.CWID order by s.Name asc"):
+            pt.add_row(row)
+
+        print(pt)
+
 
 def main():
-    wdir09 = '/Users/dmotan/Desktop/Master/SSW-810/week10'
-    wdir10 = '/Users/dmotan/Desktop/Master/SSW-810/week10/test'
-    wdir_bad_data = '/Users/dmotan/Desktop/Master/SSW-810/week10/bad'
+    wdir09 = '/Users/dmotan/Desktop/Master/SSW-810/week11'
+    # wdir10 = '/Users/dmotan/Desktop/Master/SSW-810/week10/test'
+    # wdir_bad_data = '/Users/dmotan/Desktop/Master/SSW-810/week10/bad'
 
     try:
         print("Good data")
         _ = Repository(wdir09)
 
-        print("\nBad Data")
-        print("should report unkown student instructor")
-        _ = Repository(wdir10)
+        # print("\nBad Data")
+        # print("should report unkown student instructor")
+        # _ = Repository(wdir10)
 
-        print("\nBad Fields\n")
-        print("should report bad student, grade, instructor feeds")
-        _ = Repository(wdir_bad_data)
+        # print("\nBad Fields\n")
+        # print("should report bad student, grade, instructor feeds")
+        # _ = Repository(wdir_bad_data)
     except (FileNotFoundError, KeyError, ValueError) as e:
         print(f"Exception in main: {e}")
 
