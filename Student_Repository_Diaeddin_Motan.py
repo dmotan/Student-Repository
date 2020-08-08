@@ -4,6 +4,7 @@ from prettytable import PrettyTable
 from utilities import file_reader
 from typing import List, Tuple, Dict, DefaultDict, Iterator, Any, Set
 import sqlite3
+from flask import Flask, render_template
 
 
 class Major:
@@ -216,20 +217,10 @@ class Repository:
 
 def main():
     wdir09 = '/Users/dmotan/Desktop/Master/SSW-810/week11'
-    # wdir10 = '/Users/dmotan/Desktop/Master/SSW-810/week10/test'
-    # wdir_bad_data = '/Users/dmotan/Desktop/Master/SSW-810/week10/bad'
 
     try:
         print("Good data")
         _ = Repository(wdir09)
-
-        # print("\nBad Data")
-        # print("should report unkown student instructor")
-        # _ = Repository(wdir10)
-
-        # print("\nBad Fields\n")
-        # print("should report bad student, grade, instructor feeds")
-        # _ = Repository(wdir_bad_data)
     except (FileNotFoundError, KeyError, ValueError) as e:
         print(f"Exception in main: {e}")
 
